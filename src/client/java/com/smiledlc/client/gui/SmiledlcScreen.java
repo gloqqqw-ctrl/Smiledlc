@@ -1,29 +1,22 @@
 package com.smiledlc.client.gui;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import com.smiledlc.module.Module;
-import com.smiledlc.module.ModuleManager;
-
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.text.Text;
+import com.smiledlc.module.ModuleManager;
+import com.smiledlc.module.Module;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class SmiledlcScreen extends Screen {
-    private static final int CATEGORY_X = 14;
-    private static final int CATEGORY_Y = 28;
-    private static final int CATEGORY_WIDTH = 110;
-    private static final int CATEGORY_HEIGHT = 22;
-    private static final int MODULE_X = 150;
-    private static final int MODULE_WIDTH = 180;
-    private static final int MODULE_HEIGHT = 18;
-    private static final int SLIDER_WIDTH = 110;
+    private static final int PANEL_WIDTH = 250;
+    private static final int BUTTON_HEIGHT = 20;
+    private static final int BUTTON_SPACING = 4;
 
-    private final List<String> categories = new ArrayList<>();
+    private List<String> categories = new ArrayList<>();
     private String selectedCategory = "Combat";
     private List<Module> visibleModules = new ArrayList<>();
-    private int scrollOffset;
 
     public SmiledlcScreen() {
         super(Text.literal("Smiledlc"));
@@ -32,102 +25,83 @@ public class SmiledlcScreen extends Screen {
     @Override
     protected void init() {
         super.init();
-        categories.clear();
-        categories.addAll(ModuleManager.getCategories());
-        if (!categories.contains(selectedCategory)) {
-            selectedCategory = categories.isEmpty() ? "Combat" : categories.get(0);
+        this.categories.clear();
+        this.categories.addAll(ModuleManager.getCategories());
+        if (!this.categories.contains(this.selectedCategory)) {
+            this.selectedCategory = this.categories.isEmpty() ? "Combat" : this.categories.get(0);
         }
-        refreshModules();
+        updateModules();
     }
 
-    private void refreshModules() {
-        visibleModules = ModuleManager.getModulesByCategory(selectedCategory);
-        scrollOffset = 0;
+    private void updateModules() {
+        this.visibleModules.clear();
+        this.visibleModules.addAll(ModuleManager.getModulesByCategory(this.selectedCategory));
     }
 
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
         this.renderBackground(context, mouseX, mouseY, delta);
-        context.drawCenteredTextWithShadow(this.textRenderer, "Smiledlc", this.width / 2, 10, 0xFFFFFFFF);
 
-        int y = CATEGORY_Y;
-        for (String category : categories) {
-            int color = category.equals(selectedCategory) ? 0xFF2E7D32 : 0xFF3C3C3C;
-            context.fill(CATEGORY_X, y, CATEGORY_X + CATEGORY_WIDTH, y + CATEGORY_HEIGHT, color);
-            context.drawCenteredTextWithShadow(this.textRenderer, category, CATEGORY_X + CATEGORY_WIDTH / 2, y + 5, 0xFFFFFFFF);
-            y += CATEGORY_HEIGHT + 6;
+        int x = 10;
+        int y = 10;
+
+        context.drawCenteredTextWithShadow(this.textRenderer, "Smiledlc", this.width / 2, y, 0xFFFFFF);
+        y += 20;
+
+        for (String category : this.categories) {
+            int bgColor = category.equals(this.selectedCategory) ? 0xFF00AA00 : 0xFF333333;
+            context.fill(x, y, x + PANEL_WIDTH, y + BUTTON_HEIGHT, bgColor);
+            context.drawCenteredTextWithShadow(this.textRenderer, category, x + PANEL_WIDTH / 2, y + 5, 0xFFFFFF);
+            y += BUTTON_HEIGHT + BUTTON_SPACING;
         }
 
-        int moduleY = 28;
-        int count = 0;
-        for (Module module : visibleModules) {
-            int renderY = moduleY + count * (MODULE_HEIGHT + 6) - scrollOffset;
-            if (renderY < 20 || renderY > this.height) {
-                count++;
-                continue;
-            }
+        y += 10;
 
-            int color = module.isEnabled() ? 0xFF00C853 : 0xFF424242;
-            context.fill(MODULE_X, renderY, MODULE_X + MODULE_WIDTH, renderY + MODULE_HEIGHT, color);
-            context.drawTextWithShadow(this.textRenderer, module.getName(), MODULE_X + 8, renderY + 4, 0xFFFFFFFF);
+        for (Module module : this.visibleModules) {
+            int moduleColor = module.isEnabled() ? 0xFF00FF00 : 0xFF444444;
+            context.fill(x, y, x + PANEL_WIDTH, y + BUTTON_HEIGHT, moduleColor);
+            context.drawTextWithShadow(this.textRenderer, module.getName(), x + 8, y + 5, 0xFFFFFF);
 
-            for (String key : List.of("value")) {
-                if (module.getFloat(key) == 0f) {
-                    continue;
-                }
-                int sliderX = MODULE_X + MODULE_WIDTH + 16;
-                int sliderY = renderY;
-                int valueWidth = (int) ((module.getFloat(key) / 10f) * SLIDER_WIDTH);
-                context.fill(sliderX, sliderY, sliderX + SLIDER_WIDTH, sliderY + MODULE_HEIGHT, 0xFF2A2A2A);
-                context.fill(sliderX, sliderY, sliderX + valueWidth, sliderY + MODULE_HEIGHT, 0xFF00B0FF);
-                context.drawTextWithShadow(this.textRenderer, "0..10", sliderX + 4, sliderY + 4, 0xFFFFFFFF);
-            }
+            float sliderValue = module.getFloat("value") / 10f;
+            int sliderWidth = (int) ((PANEL_WIDTH - 20) * sliderValue);
+            context.fill(x + 10, y + 12, x + 10 + sliderWidth, y + 16, 0xFF0088FF);
 
-            count++;
+            y += BUTTON_HEIGHT + BUTTON_SPACING;
         }
-
-        context.drawTextWithShadow(this.textRenderer, "Right Shift = open menu", 12, this.height - 18, 0xFFB0B0B0);
     }
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        int categoryY = CATEGORY_Y;
-        for (String category : categories) {
-            if (mouseX >= CATEGORY_X && mouseX <= CATEGORY_X + CATEGORY_WIDTH && mouseY >= categoryY && mouseY <= categoryY + CATEGORY_HEIGHT) {
-                selectedCategory = category;
-                refreshModules();
+        int x = 10;
+        int y = 30;
+
+        for (String category : this.categories) {
+            if (mouseX >= x && mouseX <= x + PANEL_WIDTH && mouseY >= y && mouseY <= y + BUTTON_HEIGHT) {
+                this.selectedCategory = category;
+                updateModules();
                 return true;
             }
-            categoryY += CATEGORY_HEIGHT + 6;
+            y += BUTTON_HEIGHT + BUTTON_SPACING;
         }
 
-        int moduleY = 28;
-        int index = 0;
-        for (Module module : visibleModules) {
-            int renderY = moduleY + index * (MODULE_HEIGHT + 6) - scrollOffset;
-            if (mouseX >= MODULE_X && mouseX <= MODULE_X + MODULE_WIDTH && mouseY >= renderY && mouseY <= renderY + MODULE_HEIGHT) {
+        y += 10;
+
+        for (Module module : this.visibleModules) {
+            if (mouseX >= x && mouseX <= x + PANEL_WIDTH && mouseY >= y && mouseY <= y + BUTTON_HEIGHT) {
                 module.toggle();
                 return true;
             }
 
-            int sliderX = MODULE_X + MODULE_WIDTH + 16;
-            int sliderY = renderY;
-            if (mouseX >= sliderX && mouseX <= sliderX + SLIDER_WIDTH && mouseY >= sliderY && mouseY <= sliderY + MODULE_HEIGHT) {
-                float ratio = (float) (mouseX - sliderX) / (float) SLIDER_WIDTH;
+            if (mouseX >= x + 10 && mouseX <= x + PANEL_WIDTH - 10 && mouseY >= y + 12 && mouseY <= y + 16) {
+                float ratio = (float) (mouseX - x - 10) / (PANEL_WIDTH - 20);
                 module.setFloat("value", ratio * 10f);
                 return true;
             }
-            index++;
+
+            y += BUTTON_HEIGHT + BUTTON_SPACING;
         }
 
         return super.mouseClicked(mouseX, mouseY, button);
-    }
-
-    @Override
-    public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
-        scrollOffset += verticalAmount > 0 ? 18 : -18;
-        scrollOffset = Math.max(0, scrollOffset);
-        return true;
     }
 
     @Override
