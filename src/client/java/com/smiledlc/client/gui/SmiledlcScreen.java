@@ -1,24 +1,29 @@
 package com.smiledlc.client.gui;
 
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.text.Text;
-import com.smiledlc.module.ModuleManager;
-import com.smiledlc.module.Module;
-
 import java.util.ArrayList;
 import java.util.List;
 
+import com.smiledlc.module.Module;
+import com.smiledlc.module.ModuleManager;
+
+import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.text.Text;
+
 public class SmiledlcScreen extends Screen {
-    private String currentCategory = "Combat";
-    private List<String> categories;
-    private List<Module> currentModules;
-    
-    private int scrollOffset = 0;
-    private static final int MODULE_HEIGHT = 25;
-    private static final int CATEGORY_WIDTH = 90;
+    private static final int CATEGORY_X = 14;
+    private static final int CATEGORY_Y = 28;
+    private static final int CATEGORY_WIDTH = 110;
+    private static final int CATEGORY_HEIGHT = 22;
+    private static final int MODULE_X = 150;
     private static final int MODULE_WIDTH = 180;
-    private static final int SLIDER_WIDTH = 100;
+    private static final int MODULE_HEIGHT = 18;
+    private static final int SLIDER_WIDTH = 110;
+
+    private final List<String> categories = new ArrayList<>();
+    private String selectedCategory = "Combat";
+    private List<Module> visibleModules = new ArrayList<>();
+    private int scrollOffset;
 
     public SmiledlcScreen() {
         super(Text.literal("Smiledlc"));
@@ -27,163 +32,102 @@ public class SmiledlcScreen extends Screen {
     @Override
     protected void init() {
         super.init();
-        this.categories = new ArrayList<>(ModuleManager.getCategories());
-        updateModuleList();
+        categories.clear();
+        categories.addAll(ModuleManager.getCategories());
+        if (!categories.contains(selectedCategory)) {
+            selectedCategory = categories.isEmpty() ? "Combat" : categories.get(0);
+        }
+        refreshModules();
     }
 
-    private void updateModuleList() {
-        this.currentModules = new ArrayList<>(ModuleManager.getModulesByCategory(currentCategory));
-        this.scrollOffset = 0;
+    private void refreshModules() {
+        visibleModules = ModuleManager.getModulesByCategory(selectedCategory);
+        scrollOffset = 0;
     }
 
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
         this.renderBackground(context, mouseX, mouseY, delta);
+        context.drawCenteredTextWithShadow(this.textRenderer, "Smiledlc", this.width / 2, 10, 0xFFFFFFFF);
 
-        // Nagłówek
-        context.drawCenteredTextWithShadow(this.textRenderer, "Smiledlc", this.width / 2, 10, 0xFFFFFF);
-
-        // Rysuj kategorie (lewo)
-        int categoryX = 10;
-        int categoryY = 35;
+        int y = CATEGORY_Y;
         for (String category : categories) {
-            boolean isSelected = category.equals(currentCategory);
-            int bgColor = isSelected ? 0xFF00FF00 : 0xFF444444;
-            int textColor = isSelected ? 0xFF000000 : 0xFFFFFFFF;
-            
-            // Tło przycisku kategorii
-            context.fill(categoryX, categoryY, categoryX + CATEGORY_WIDTH, categoryY + MODULE_HEIGHT, bgColor);
-            // Tekst kategorii
-            context.drawCenteredTextWithShadow(this.textRenderer, category, 
-                categoryX + CATEGORY_WIDTH / 2, categoryY + (MODULE_HEIGHT - 8) / 2, textColor);
-            
-            // Klik na kategorię
-            if (mouseX >= categoryX && mouseX < categoryX + CATEGORY_WIDTH && 
-                mouseY >= categoryY && mouseY < categoryY + MODULE_HEIGHT) {
-                if (this.isMouseInBounds(mouseX, mouseY)) {
-                    // Będzie obsłużone w mouseClicked
+            int color = category.equals(selectedCategory) ? 0xFF2E7D32 : 0xFF3C3C3C;
+            context.fill(CATEGORY_X, y, CATEGORY_X + CATEGORY_WIDTH, y + CATEGORY_HEIGHT, color);
+            context.drawCenteredTextWithShadow(this.textRenderer, category, CATEGORY_X + CATEGORY_WIDTH / 2, y + 5, 0xFFFFFFFF);
+            y += CATEGORY_HEIGHT + 6;
+        }
+
+        int moduleY = 28;
+        int count = 0;
+        for (Module module : visibleModules) {
+            int renderY = moduleY + count * (MODULE_HEIGHT + 6) - scrollOffset;
+            if (renderY < 20 || renderY > this.height) {
+                count++;
+                continue;
+            }
+
+            int color = module.isEnabled() ? 0xFF00C853 : 0xFF424242;
+            context.fill(MODULE_X, renderY, MODULE_X + MODULE_WIDTH, renderY + MODULE_HEIGHT, color);
+            context.drawTextWithShadow(this.textRenderer, module.getName(), MODULE_X + 8, renderY + 4, 0xFFFFFFFF);
+
+            for (String key : List.of("value")) {
+                if (module.getFloat(key) == 0f) {
+                    continue;
                 }
+                int sliderX = MODULE_X + MODULE_WIDTH + 16;
+                int sliderY = renderY;
+                int valueWidth = (int) ((module.getFloat(key) / 10f) * SLIDER_WIDTH);
+                context.fill(sliderX, sliderY, sliderX + SLIDER_WIDTH, sliderY + MODULE_HEIGHT, 0xFF2A2A2A);
+                context.fill(sliderX, sliderY, sliderX + valueWidth, sliderY + MODULE_HEIGHT, 0xFF00B0FF);
+                context.drawTextWithShadow(this.textRenderer, "0..10", sliderX + 4, sliderY + 4, 0xFFFFFFFF);
             }
-            
-            categoryY += MODULE_HEIGHT + 5;
+
+            count++;
         }
 
-        // Rysuj moduły (prawo)
-        int moduleX = categoryX + CATEGORY_WIDTH + 20;
-        int moduleY = 35;
-        int maxModules = (this.height - 60) / (MODULE_HEIGHT + 5);
-        int startIndex = Math.max(0, scrollOffset / (MODULE_HEIGHT + 5));
-        int endIndex = Math.min(currentModules.size(), startIndex + maxModules);
-
-        for (int i = startIndex; i < endIndex; i++) {
-            Module module = currentModules.get(i);
-            int displayY = moduleY + (i - startIndex) * (MODULE_HEIGHT + 5);
-            
-            // Tło przycisku modułu
-            int moduleBgColor = module.isEnabled() ? 0xFF00AA00 : 0xFF444444;
-            context.fill(moduleX, displayY, moduleX + MODULE_WIDTH, displayY + MODULE_HEIGHT, moduleBgColor);
-            
-            // Tekst modułu
-            int textColor = module.isEnabled() ? 0xFF000000 : 0xFFFFFFFF;
-            context.drawCenteredTextWithShadow(this.textRenderer, module.getName(), 
-                moduleX + MODULE_WIDTH / 2, displayY + (MODULE_HEIGHT - 8) / 2, textColor);
-            
-            // Slider dla modułów z ustawieniami
-            if (module.getName().equals("AimAssist") || module.getName().equals("Speed")) {
-                int sliderX = moduleX + MODULE_WIDTH + 20;
-                renderSlider(context, sliderX, displayY, module);
-            }
-        }
-        
-        // Wskaźnik myszki
-        context.drawTextWithShadow(this.textRenderer, "X: " + mouseX + " Y: " + mouseY, 10, this.height - 20, 0xFFFFFF);
-    }
-
-    private void renderSlider(DrawContext context, int x, int y, Module module) {
-        float value = 0;
-        String label = "";
-        
-        if (module.getName().equals("AimAssist")) {
-            value = ((com.smiledlc.module.modules.AimAssist) module).getSpeed() / 10f;
-            label = "Speed: " + (int)(value * 10);
-        } else if (module.getName().equals("Speed")) {
-            value = ((com.smiledlc.module.modules.Speed) module).getAmount() / 10f;
-            label = "Amt: " + (int)(value * 10);
-        }
-        
-        // Tło suwaka
-        context.fill(x, y, x + SLIDER_WIDTH, y + MODULE_HEIGHT, 0xFF333333);
-        
-        // Wypełnienie suwaka
-        int filledWidth = (int)(SLIDER_WIDTH * value);
-        context.fill(x, y, x + filledWidth, y + MODULE_HEIGHT, 0xFF0088FF);
-        
-        // Tekst
-        context.drawCenteredTextWithShadow(this.textRenderer, label, 
-            x + SLIDER_WIDTH / 2, y + (MODULE_HEIGHT - 8) / 2, 0xFFFFFF);
-    }
-
-    @Override
-    public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
-        if (scrollY > 0) {
-            scrollOffset = Math.max(0, scrollOffset - MODULE_HEIGHT - 5);
-        } else {
-            scrollOffset += MODULE_HEIGHT + 5;
-        }
-        return true;
+        context.drawTextWithShadow(this.textRenderer, "Right Shift = open menu", 12, this.height - 18, 0xFFB0B0B0);
     }
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        int categoryX = 10;
-        int categoryY = 35;
-        
-        // Kliknięcie na kategorię
+        int categoryY = CATEGORY_Y;
         for (String category : categories) {
-            if (mouseX >= categoryX && mouseX < categoryX + CATEGORY_WIDTH && 
-                mouseY >= categoryY && mouseY < categoryY + MODULE_HEIGHT) {
-                this.currentCategory = category;
-                updateModuleList();
+            if (mouseX >= CATEGORY_X && mouseX <= CATEGORY_X + CATEGORY_WIDTH && mouseY >= categoryY && mouseY <= categoryY + CATEGORY_HEIGHT) {
+                selectedCategory = category;
+                refreshModules();
                 return true;
             }
-            categoryY += MODULE_HEIGHT + 5;
+            categoryY += CATEGORY_HEIGHT + 6;
         }
-        
-        // Kliknięcie na moduł
-        int moduleX = categoryX + CATEGORY_WIDTH + 20;
-        int moduleY = 35;
-        int maxModules = (this.height - 60) / (MODULE_HEIGHT + 5);
-        int startIndex = Math.max(0, scrollOffset / (MODULE_HEIGHT + 5));
-        int endIndex = Math.min(currentModules.size(), startIndex + maxModules);
 
-        for (int i = startIndex; i < endIndex; i++) {
-            Module module = currentModules.get(i);
-            int displayY = moduleY + (i - startIndex) * (MODULE_HEIGHT + 5);
-            
-            if (mouseX >= moduleX && mouseX < moduleX + MODULE_WIDTH && 
-                mouseY >= displayY && mouseY < displayY + MODULE_HEIGHT) {
+        int moduleY = 28;
+        int index = 0;
+        for (Module module : visibleModules) {
+            int renderY = moduleY + index * (MODULE_HEIGHT + 6) - scrollOffset;
+            if (mouseX >= MODULE_X && mouseX <= MODULE_X + MODULE_WIDTH && mouseY >= renderY && mouseY <= renderY + MODULE_HEIGHT) {
                 module.toggle();
                 return true;
             }
-            
-            // Slider interaction
-            if (module.getName().equals("AimAssist") || module.getName().equals("Speed")) {
-                int sliderX = moduleX + MODULE_WIDTH + 20;
-                if (mouseX >= sliderX && mouseX < sliderX + SLIDER_WIDTH && 
-                    mouseY >= displayY && mouseY < displayY + MODULE_HEIGHT) {
-                    float sliderValue = (float)(mouseX - sliderX) / SLIDER_WIDTH;
-                    
-                    if (module.getName().equals("AimAssist")) {
-                        ((com.smiledlc.module.modules.AimAssist) module).setSpeed(sliderValue * 10);
-                    } else if (module.getName().equals("Speed")) {
-                        ((com.smiledlc.module.modules.Speed) module).setAmount(sliderValue * 10);
-                    }
-                    return true;
-                }
+
+            int sliderX = MODULE_X + MODULE_WIDTH + 16;
+            int sliderY = renderY;
+            if (mouseX >= sliderX && mouseX <= sliderX + SLIDER_WIDTH && mouseY >= sliderY && mouseY <= sliderY + MODULE_HEIGHT) {
+                float ratio = (float) (mouseX - sliderX) / (float) SLIDER_WIDTH;
+                module.setFloat("value", ratio * 10f);
+                return true;
             }
+            index++;
         }
-        
+
         return super.mouseClicked(mouseX, mouseY, button);
+    }
+
+    @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
+        scrollOffset += verticalAmount > 0 ? 18 : -18;
+        scrollOffset = Math.max(0, scrollOffset);
+        return true;
     }
 
     @Override
@@ -194,9 +138,5 @@ public class SmiledlcScreen extends Screen {
     @Override
     public boolean shouldCloseOnEsc() {
         return true;
-    }
-    
-    private boolean isMouseInBounds(double mouseX, double mouseY) {
-        return mouseX >= 0 && mouseX < this.width && mouseY >= 0 && mouseY < this.height;
     }
 }

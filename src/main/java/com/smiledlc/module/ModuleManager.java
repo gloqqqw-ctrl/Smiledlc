@@ -1,63 +1,57 @@
 package com.smiledlc.module;
 
-import com.smiledlc.module.modules.*;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
-public class ModuleManager {
-    private static List<Module> modules = new ArrayList<>();
-    private static Map<String, List<Module>> categorizedModules = new HashMap<>();
+import com.smiledlc.module.modules.AimAssist;
+import com.smiledlc.module.modules.AntiNemos;
+import com.smiledlc.module.modules.AutoDripstone;
+import com.smiledlc.module.modules.AutoLever;
+import com.smiledlc.module.modules.FastPlace;
+import com.smiledlc.module.modules.IgnoreCobwebs;
+import com.smiledlc.module.modules.RearStrike;
+import com.smiledlc.module.modules.Speed;
+import com.smiledlc.module.modules.TriggerBot;
+
+public final class ModuleManager {
+    private static final List<Module> MODULES = new ArrayList<>();
+    private static final Map<String, List<Module>> BY_CATEGORY = new HashMap<>();
+
+    private ModuleManager() {
+    }
 
     public static void init() {
-        registerModule(new IgnoreCobwebs());
-        registerModule(new AutoLever());
-        registerModule(new AutoDripstone());
-        registerModule(new AntiNemos());
-        registerModule(new RearStrike());
-        registerModule(new AimAssist());
-        registerModule(new TriggerBot());
-        registerModule(new Speed());
-        registerModule(new FastPlace());
-        
-        categorizeModules();
-    }
-
-    private static void registerModule(Module module) {
-        modules.add(module);
-    }
-
-    private static void categorizeModules() {
-        categorizedModules.clear();
-        for (Module module : modules) {
-            String category = module.getCategory();
-            categorizedModules.putIfAbsent(category, new ArrayList<>());
-            categorizedModules.get(category).add(module);
+        if (!MODULES.isEmpty()) {
+            return;
         }
+
+        register(new IgnoreCobwebs());
+        register(new AutoLever());
+        register(new AutoDripstone());
+        register(new AntiNemos());
+        register(new RearStrike());
+        register(new AimAssist());
+        register(new TriggerBot());
+        register(new Speed());
+        register(new FastPlace());
     }
 
-    public static List<Module> getModulesByCategory(String category) {
-        return categorizedModules.getOrDefault(category, new ArrayList<>());
+    private static void register(Module module) {
+        MODULES.add(module);
+        BY_CATEGORY.computeIfAbsent(module.getCategory(), ignored -> new ArrayList<>()).add(module);
     }
 
     public static List<String> getCategories() {
-        return new ArrayList<>(categorizedModules.keySet());
+        return new ArrayList<>(BY_CATEGORY.keySet());
     }
 
-    public static Module getModuleByName(String name) {
-        return modules.stream()
-            .filter(m -> m.getName().equalsIgnoreCase(name))
-            .findFirst()
-            .orElse(null);
+    public static List<Module> getModulesByCategory(String category) {
+        return new ArrayList<>(BY_CATEGORY.getOrDefault(category, List.of()));
     }
 
     public static List<Module> getAllModules() {
-        return new ArrayList<>(modules);
-    }
-
-    public static void onTick() {
-        for (Module module : modules) {
-            if (module.isEnabled()) {
-                module.onTick();
-            }
-        }
+        return new ArrayList<>(MODULES);
     }
 }

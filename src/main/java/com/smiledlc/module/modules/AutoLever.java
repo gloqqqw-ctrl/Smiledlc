@@ -5,17 +5,9 @@ import com.smiledlc.module.Module;
 public class AutoLever extends Module {
     public AutoLever() {
         super("AutoLever", "Player");
+        addFloatSetting("value", 0f, 0f, 10f);
     }
 
-    @Override
-    public void onEnable() {
-    }
-
-    @Override
-    public void onDisable() {
-    }
-
-    @Override
-    public void onTick() {
-    }
+    @Override public void onEnable() { }
+    @Override public void onDisable() { }
 }
