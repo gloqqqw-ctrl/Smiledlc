@@ -4,12 +4,12 @@ import net.fabricmc.api.ModInitializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public final class SmiledlcMod implements ModInitializer {
-	public static final String MOD_ID = "smiledlc";
-	public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
+public class SmiledlcMod implements ModInitializer {
+    public static final String MOD_ID = "smiledlc";
+    public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 
-	@Override
-	public void onInitialize() {
-		LOGGER.info("Smiledlc loaded");
-	}
+    @Override
+    public void onInitialize() {
+        LOGGER.info("Smiledlc initialized");
+    }
 }

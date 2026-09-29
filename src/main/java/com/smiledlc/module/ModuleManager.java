@@ -1,31 +1,14 @@
 package com.smiledlc.module;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import com.smiledlc.module.modules.*;
 
-import com.smiledlc.module.modules.AimAssist;
-import com.smiledlc.module.modules.AntiNemos;
-import com.smiledlc.module.modules.AutoDripstone;
-import com.smiledlc.module.modules.AutoLever;
-import com.smiledlc.module.modules.FastPlace;
-import com.smiledlc.module.modules.IgnoreCobwebs;
-import com.smiledlc.module.modules.RearStrike;
-import com.smiledlc.module.modules.Speed;
-import com.smiledlc.module.modules.TriggerBot;
-
-public final class ModuleManager {
-    private static final List<Module> MODULES = new ArrayList<>();
-    private static final Map<String, List<Module>> BY_CATEGORY = new HashMap<>();
-
-    private ModuleManager() {
-    }
+public class ModuleManager {
+    private static final Map<String, List<Module>> MODULES_BY_CATEGORY = new HashMap<>();
+    private static final List<Module> ALL_MODULES = new ArrayList<>();
 
     public static void init() {
-        if (!MODULES.isEmpty()) {
-            return;
-        }
+        if (!ALL_MODULES.isEmpty()) return;
 
         register(new IgnoreCobwebs());
         register(new AutoLever());
@@ -39,19 +22,19 @@ public final class ModuleManager {
     }
 
     private static void register(Module module) {
-        MODULES.add(module);
-        BY_CATEGORY.computeIfAbsent(module.getCategory(), ignored -> new ArrayList<>()).add(module);
+        ALL_MODULES.add(module);
+        MODULES_BY_CATEGORY.computeIfAbsent(module.getCategory(), k -> new ArrayList<>()).add(module);
     }
 
     public static List<String> getCategories() {
-        return new ArrayList<>(BY_CATEGORY.keySet());
+        return new ArrayList<>(MODULES_BY_CATEGORY.keySet());
     }
 
-    public static List<Module> getModulesByCategory(String category) {
-        return new ArrayList<>(BY_CATEGORY.getOrDefault(category, List.of()));
+    public static List<Module> getByCategory(String category) {
+        return new ArrayList<>(MODULES_BY_CATEGORY.getOrDefault(category, new ArrayList<>()));
     }
 
-    public static List<Module> getAllModules() {
-        return new ArrayList<>(MODULES);
+    public static List<Module> getAll() {
+        return new ArrayList<>(ALL_MODULES);
     }
 }
